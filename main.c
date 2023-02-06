@@ -1,5 +1,5 @@
 // Bastian GARCON 11/12/2022
-// Programme faisant des calcules de matrices
+// Programme faisant des calculs de matrices
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -33,7 +33,7 @@
 #define BEIGE 14
 #define WHITE 15
 // taille des différents menus
-#define SIZE_MAIN_MENU 4
+#define SIZE_MAIN_MENU 6
 
 // Déclaration des structures ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -66,7 +66,7 @@ typedef struct matrix
     float dataMaxAbs;
     // variable qui précise si la matrive contient que des entiers ou non
     bool intPresence;
-    // pointeur sur le maillon à l'indice (0, 0) de la matrice 
+    // pointeur sur le maillon à l'indice (0, 0) de la matrice
     PTunit pUnit00;
     // pointeur sur le maillon se trouvant à la dernière ligne et à la dernière colonne de la matrice
     PTunit pUnitEnd;
@@ -84,7 +84,7 @@ PTmatrix pBENstartMatrix, pBENendMatrix;
 PTunit pBENstartUnit, pBENendUnit;
 
 int numberOfMatrix = 0;
-PTmatrix pStratMatrix, pEndMatrix;
+PTmatrix pStartMatrix, pEndMatrix;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //                                                          FONCTIONS                                                          //
@@ -312,7 +312,7 @@ void Fill_matrix(PTmatrix pMatrix)
             scanf("%f", &pUnit->data);
             Compare_dataMax_to(pUnit->data, pMatrix);
         }
-        i = i + 1;
+        i++;
     }
 }
 
@@ -458,10 +458,10 @@ void Remove_column(int unitColumn, PTmatrix pMatrix)
 }
 
 /* Met dans la poubelle la matrice donnée (tout comme ses maillons) -------------------------------------------------------------
-*/
+ */
 void Remove_matrix(PTmatrix pMatrix)
 {
-// à faire ...
+    // à faire ...
 }
 
 /* Change les coordonnées d'un maillon par les coordonnées en paramètres --------------------------------------------------------
@@ -544,18 +544,89 @@ void Update_data_max(PTmatrix pMatrix)
             pUnit = pUnit->pRight;
             Compare_dataMax_to(pUnit->data, pMatrix);
         }
-        i = i + 1;
+        i++;
     }
+}
+
+/* Sauvgarde dans un fichier texte les matrices ---------------------------------------------------------------------------------
+ */
+void Save_matrix(char fileName[BASIC_STRING_SIZE])
+{
+    int i, j;
+    PTmatrix pMatrix = pStartMatrix->pNext;
+    PTunit pUnit = NULL;
+    FILE *fileOutput = NULL;
+
+    // on ouvre une première fois le fichier en mode lecture pour voir s'il existe déjà
+    fileOutput = fopen(fileName, "rt");
+
+    if (fileOutput != NULL)
+    {
+        Change_text_color(BLACK, RED);
+        printf("\nLe fichier sous le nom de \"%s\" existe deja.\n");
+        Change_text_color(BLACK, WHITE);
+        fclose(fileOutput);
+        return;
+    }
+
+    fileOutput = fopen(fileName, "wt");
+    while (pMatrix != pEndMatrix)
+    {
+        pUnit = pMatrix->pUnit00;
+        //  <nomMatrice>    <valeurMaximumAbsolue>(saut de ligne)
+        fprintf(fileOutput, "\t%s\t%f\n", pMatrix->name, pMatrix->dataMaxAbs);
+
+        i = 0;
+        while (i <= pMatrix->pUnitEnd->M)
+        {
+            pUnit = Unit_at(i, 0, pMatrix);
+            fprintf(fileOutput, "%f", pUnit->data);
+
+            // on parcour les colonnes de la matrice
+            while (pUnit->N < pMatrix->pUnitEnd->N)
+            {
+                pUnit = pUnit->pRight;
+                fprintf(fileOutput, " %f", pUnit->data);
+            }
+            fprintf(fileOutput,"\n");
+            i++;
+        }
+        pMatrix = pMatrix->pNext;
+    }
+
+    fclose(fileOutput);
+}
+
+/* Charger des matrices ---------------------------------------------------------------------------------------------------------
+*/
+void Load_matrix(char fileName[BASIC_STRING_SIZE])
+{
+    int i, j;
+    PTmatrix pMatrix = pStartMatrix->pNext;
+    PTunit pUnit = NULL;
+    FILE *fileInput = NULL;
+
+    fileInput = fopen(fileName, "rt");
+    // on regarde si le fichier existe
+    if (fileInput == NULL)
+    {
+        Change_text_color(BLACK, RED);
+        printf("\nLe fichier sous le nom de \"%s\" n'existe pas.\n");
+        Change_text_color(BLACK, WHITE);
+        return;
+    }
+
+    fclose(fileInput);
 }
 
 // Interface ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-/* Efface tout le terminal et met le curseur à la ligne 1 -----------------------------------------------------------------------
+/* Efface tout le terminal et met le curseur à la ligne et à la colonne données -------------------------------------------------
  */
-void Clear_console()
+void Clear_console(int line, int column)
 {
     system("cls");
-    Put_cursor_to(1, 0);
+    Put_cursor_to(line, column);
 }
 
 /* Renvoie l'entrée du clavier qu'elle soit simple ou double --------------------------------------------------------------------
@@ -622,17 +693,19 @@ void Empty_line(int line, int n)
  */
 void Display_commandes_menus()
 {
+    Change_text_color(BLACK, ORANGE);
     printf("\n\n\n\t\t'fleche du haut' : menu precedente");
     printf("\tfleche du bas : option suivante");
     printf("\t\t'ENTRER' : selectionner");
     printf("\t'ECHAP' : Quitter");
+    Change_text_color(BLACK, WHITE);
 }
 
 /* Efface le terminal et affiche le titre du menu principal ---------------------------------------------------------------------
  */
 void Display_main_menu_title()
 {
-    Clear_console();
+    Clear_console(1, 0);
     printf("\t**********************************\n");
     printf("\t*         MENU PRINCIPAL         *\n");
     printf("\t**********************************\n");
@@ -649,8 +722,11 @@ void Display_main_menu(int select)
         printf("\n\t1 - Ajouter une matrice");
         Change_text_color(BLACK, WHITE);
         printf("\n\t2 - Supprimer une matrice");
-        printf("\n\t3 - Afficher les matrices\n");
-        printf("\n\tESC - Quitter");
+        printf("\n\t3 - Afficher les matrices");
+        printf("\n\t4 - Enregistrer vos matrices");
+        printf("\n\t5 - Charger des matrices");
+
+        printf("\n\n\tESC - Quitter");
     }
     else if (select == 2)
     {
@@ -658,25 +734,58 @@ void Display_main_menu(int select)
         Change_text_color(WHITE, BLACK);
         printf("\n\t2 - Supprimer une matrice");
         Change_text_color(BLACK, WHITE);
-        printf("\n\t3 - Afficher les matrices\n");
-        printf("\n\tESC - Quitter");
+        printf("\n\t3 - Afficher les matrices");
+        printf("\n\t4 - Enregistrer vos matrices");
+        printf("\n\t5 - Charger des matrices");
+
+        printf("\n\n\tESC - Quitter");
     }
     else if (select == 3)
     {
         printf("\n\t1 - Ajouter une matrice");
         printf("\n\t2 - Supprimer une matrice");
         Change_text_color(WHITE, BLACK);
-        printf("\n\t3 - Afficher les matrices\n");
+        printf("\n\t3 - Afficher les matrices");
         Change_text_color(BLACK, WHITE);
-        printf("\n\tESC - Quitter");
+        printf("\n\t4 - Enregistrer vos matrices");
+        printf("\n\t5 - Charger des matrices");
+
+        printf("\n\n\tESC - Quitter");
+    }
+    else if (select == 4)
+    {
+        printf("\n\t1 - Ajouter une matrice");
+        printf("\n\t2 - Supprimer une matrice");
+        printf("\n\t3 - Afficher les matrices");
+        Change_text_color(WHITE, BLACK);
+        printf("\n\t4 - Enregistrer vos matrices");
+        Change_text_color(BLACK, WHITE);
+        printf("\n\t5 - Charger des matrices");
+
+        printf("\n\n\tESC - Quitter");
+    }
+    else if (select == 5)
+    {
+        printf("\n\t1 - Ajouter une matrice");
+        printf("\n\t2 - Supprimer une matrice");
+        printf("\n\t3 - Afficher les matrices");
+        printf("\n\t4 - Enregistrer vos matrices");
+        Change_text_color(WHITE, BLACK);
+        printf("\n\t5 - Charger des matrices");
+        Change_text_color(BLACK, WHITE);
+
+        printf("\n\n\tESC - Quitter");
     }
     else
     {
         printf("\n\t1 - Ajouter une matrice");
         printf("\n\t2 - Supprimer une matrice");
-        printf("\n\t3 - Afficher les matrices\n");
+        printf("\n\t3 - Afficher les matrices");
+        printf("\n\t4 - Enregistrer vos matrices");
+        printf("\n\t5 - Charger des matrices");
+
         Change_text_color(WHITE, BLACK);
-        printf("\n\tESC - Quitter");
+        printf("\n\n\tESC - Quitter");
         Change_text_color(BLACK, WHITE);
     }
 
@@ -684,7 +793,7 @@ void Display_main_menu(int select)
 }
 
 /* Renvoie le numéro de l'option à surligner en fonction de "inputKeyboard" -----------------------------------------------------
-*/
+ */
 short int Update_Highlight_option_menu(short int inputKeyboard, short int select, int sizeMenu)
 {
     // '↑'
@@ -736,11 +845,11 @@ short int Select_main_menu()
 }
 
 /* Renvoie la matrice à surligner en fonction de "keyboardInput" ----------------------------------------------------------------
-*/
+ */
 PTmatrix Update_Highlight_matrix(short int inputKeyboard, PTmatrix pHighlightMatrix)
 {
     // '↑'
-    if (inputKeyboard == 472 && pHighlightMatrix->pPrevious != pStratMatrix)
+    if (inputKeyboard == 472 && pHighlightMatrix->pPrevious != pStartMatrix)
     {
         return (pHighlightMatrix->pPrevious);
     }
@@ -749,60 +858,62 @@ PTmatrix Update_Highlight_matrix(short int inputKeyboard, PTmatrix pHighlightMat
     {
         return (pHighlightMatrix->pNext);
     }
+    else
+    {
+        return (pHighlightMatrix);
+    }
 }
 
 /* Affiche l'entête de la liste des matrices ------------------------------------------------------------------------------------
-*/
+ */
 void Display_matrix_list_header()
 {
     Change_text_color(DARK_BLUE, WHITE);
     printf("\tNom de la matrice");
-    Change_text_color(BLACK , WHITE);
+    Change_text_color(BLACK, WHITE);
     printf("    | ");
     Change_text_color(DARK_GREEN, WHITE);
     printf("(nombre de ligne ; nombre de colonne)\n");
-    Change_text_color(BLACK , WHITE);
+    Change_text_color(BLACK, WHITE);
 }
 
 /* Affiche la liste des matrices ------------------------------------------------------------------------------------------------
-*/
+ */
 void Display_matrix_list(PTmatrix pHighlightMatrix)
 {
-    if(pStratMatrix->pNext == pEndMatrix)
+    if (pStartMatrix->pNext == pEndMatrix)
     {
         return;
     }
 
-    PTmatrix pMatrix = pStratMatrix->pNext;
+    PTmatrix pMatrix = pStartMatrix->pNext;
 
-    while(pMatrix != pEndMatrix)
+    while (pMatrix != pEndMatrix)
     {
-        if(pMatrix == pHighlightMatrix)
+        if (pMatrix == pHighlightMatrix)
         {
             Change_text_color(WHITE, BLACK);
-            printf("\t%20s | (%d ; %d)\n",pMatrix->name, (pMatrix->pUnitEnd->M + 1), (pMatrix->pUnitEnd->N + 1));
+            printf("\t%20s | (%d ; %d)\n", pMatrix->name, (pMatrix->pUnitEnd->M + 1), (pMatrix->pUnitEnd->N + 1));
             Change_text_color(BLACK, WHITE);
         }
         else
         {
-            printf("\t%20s | (%d ; %d)\n",pMatrix->name, (pMatrix->pUnitEnd->M + 1), (pMatrix->pUnitEnd->N + 1));
+            printf("\t%20s | (%d ; %d)\n", pMatrix->name, (pMatrix->pUnitEnd->M + 1), (pMatrix->pUnitEnd->N + 1));
         }
 
         pMatrix = pMatrix->pNext;
     }
-
-    Display_matrix(pHighlightMatrix, 6, 70, NULL);
 }
 
 /* Affiche les données de la matrice à partir de la ligne et de la colonne données en paramètre ---------------------------------
 Les coordonnées doivent être à jour */
 void Display_matrix(PTmatrix pMatrix, int line, int column, PTunit pHighlightUnit)
 {
-    if(pMatrix == NULL)
+    if (pMatrix == NULL)
     {
         return;
     }
-    
+
     int i = 0;
     // espace + 1 que prend la valeur max de la matrice
     int dataMaxSpace = Space_of(floor(pMatrix->dataMaxAbs)) + 4;
@@ -849,6 +960,7 @@ void Display_matrix(PTmatrix pMatrix, int line, int column, PTunit pHighlightUni
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void main()
 {
+    char name[BASIC_STRING_SIZE];
     char OK;
     short int select = 1;
     short int inputKeyboard;
@@ -857,16 +969,16 @@ void main()
     PTmatrix pMatrix = NULL;
 
     // Allocation de la mémoire pour les bidons de la liste des matrices
-    pStratMatrix = (PTmatrix)malloc(sizeof(*pStratMatrix));
+    pStartMatrix = (PTmatrix)malloc(sizeof(*pStartMatrix));
     pEndMatrix = (PTmatrix)malloc(sizeof(*pEndMatrix));
     // Initiallisation des bidons de la liste des matrices
-    pStratMatrix->pNext = pEndMatrix;
-    pEndMatrix->pPrevious = pStratMatrix;
-    pStratMatrix->pPrevious = NULL;
+    pStartMatrix->pNext = pEndMatrix;
+    pEndMatrix->pPrevious = pStartMatrix;
+    pStartMatrix->pPrevious = NULL;
     pEndMatrix->pNext = NULL;
-    pStratMatrix->pUnit00 = NULL;
+    pStartMatrix->pUnit00 = NULL;
     pEndMatrix->pUnit00 = NULL;
-    pStratMatrix->pUnitEnd = NULL;
+    pStartMatrix->pUnitEnd = NULL;
     pEndMatrix->pUnitEnd = NULL;
     // Allocation de la mémoire pour les bidons des listes poubelles
     pBENstartMatrix = (PTmatrix)malloc(sizeof(*pBENstartMatrix));
@@ -898,7 +1010,7 @@ void main()
         // Ajouter une matrice --------------------------------------------------------------------------------------------------
         if (select == 1)
         {
-            Clear_console();
+            Clear_console(1, 0);
             Change_text_color(LIGHT_GREEN, BLACK);
             printf("\t--- Ajouter une matrice ---\n\n\n");
             Change_text_color(BLACK, WHITE);
@@ -923,24 +1035,43 @@ void main()
             // faire la fonction ...
         }
         // Afficher la liste des matrices ---------------------------------------------------------------------------------------
-        else if (select == 3 && pStratMatrix->pNext != pEndMatrix)
+        else if (select == 3 && pStartMatrix->pNext != pEndMatrix)
         {
-            
-            pMatrix = pStratMatrix->pNext;
-            Clear_console();
+
+            pMatrix = pStartMatrix->pNext;
+            Clear_console(1, 0);
             Change_text_color(LIGHT_GREEN, BLACK);
             printf("\t--- Votre liste de matrice ---\n\n\n");
             Change_text_color(BLACK, WHITE);
 
             Display_matrix_list_header();
             // tant que l'entrée clavier est différente de 'ECHAP'
-            while(inputKeyboard != 27)
-            {   
+            while (inputKeyboard != 27)
+            {
                 inputKeyboard = Input_keyboard();
-                Empty_line(6, numberOfMatrix);
+                Empty_line(6, max(numberOfMatrix, pMatrix->pUnitEnd->M + 1));
                 pMatrix = Update_Highlight_matrix(inputKeyboard, pMatrix);
                 Display_matrix_list(pMatrix);
+                Display_matrix(pMatrix, 6, 70, NULL);
             }
+        }
+        // Enregistrer ----------------------------------------------------------------------------------------------------------
+        else if (select == 4)
+        {
+            Clear_console(1, 0);
+            Change_text_color(LIGHT_GREEN, BLACK);
+            printf("\t--- Enregistrer vos matrices ---\n\n\n");
+            Change_text_color(BLACK, WHITE);
+
+            printf("Entrer le nom du fichier : ");
+            scanf("%s", &name);
+
+            Save_matrix(name);
+        }
+        // Charger --------------------------------------------------------------------------------------------------------------
+        else if (select == 5)
+        {
+
         }
         if (select != SIZE_MAIN_MENU)
         {
